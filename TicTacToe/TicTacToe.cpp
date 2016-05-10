@@ -219,7 +219,7 @@ int GetWinner(int wins[3])
 	//check for winner
 	for (int i = 0; i < ARRAYSIZE(cells); i += 3)
 	{
-		if (0 != gameBoard[cells[i]] && gameBoard[cells[i]] == gameBoard[cells[i + 1]] && gameBoard[cells[i]] == gameBoard[cells[i + 2])
+		if (0 != gameBoard[cells[i]] && gameBoard[cells[i]] == gameBoard[cells[i + 1]] && gameBoard[cells[i]] == gameBoard[cells[i + 2]])
 		{
 			//we have a winner
 			wins[0] = cells[i];
@@ -235,7 +235,23 @@ int GetWinner(int wins[3])
 	for (int i = 0; i < ARRAYSIZE(gameBoard); ++i)
 		if (0 == gameBoard[i])
 			return 0; //continue to play
-	return 3 //it's a draw
+	return 3; //it's a draw
+
+}
+
+void ShowTurn(HWND hwnd, HDC hdc)
+{
+	RECT rc;
+	static const WCHAR szTurn1[] = L"Turn: Player 1";
+	static const WCHAR szTurn2[] = L"Turn: Player 2";
+	
+	const WCHAR * pszTurnText = (playerTurn == 1) ? szTurn1 : szTurn2;
+
+	if (GetClientRect(hwnd, &rc))
+	{
+		rc.top = rc.bottom - 48;
+		DrawText(hdc, pszTurnText, lstrlen(pszTurnText), &rc, DT_VCENTER);
+	}
 
 }
 
@@ -253,7 +269,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             int wmId = LOWORD(wParam);
             // Parse the menu selections:
             switch (wmId)
-            {
+			{
+			case ID_FILE_NEWGAME:
+				{
+					int ret = MessageBox(hWnd, L"Are you sure you want to start a new game?", L"New Game", MB_YESNO | MB_ICONQUESTION);
+					if (IDYES == ret)
+					{
+						//reset and start a new game
+						playerTurn = 1;
+						winner = 0;
+						ZeroMemory(gameBoard, sizeof(gameBoard));
+						//force a paint message
+						InvalidateRect(hWnd, NULL, TRUE); //post WM_PAINT to our windowProc. It gets queued in our msg queue.
+						UpdateWindow(hWnd); //forces immediate handling of WM_PAINT
+					}
+				}
+				break;
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
@@ -270,6 +301,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			int xPos = GET_X_LPARAM(lParam);
 			int yPos = GET_Y_LPARAM(lParam);
 
+			//only click if there is a player turn (1 or 2)
+			if (playerTurn == 0)
+				break;
+		
 			int index = GetCellNumberFromPoint(hWnd, xPos, yPos);
 
 			HDC hdc = GetDC(hWnd);
@@ -299,13 +334,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 							MessageBox(hWnd,
 								L"No one wins this time! :( ", L"It's a draw",
 								MB_OK | MB_ICONEXCLAMATION);
+							playerTurn = 0;
 						}
 						else if (winner == 0)
 						{
 							playerTurn = (playerTurn == 1) ? 2 : 1;
 						}
-
-						
+						//display turn
+						ShowTurn(hWnd, hdc);
 						
 					}
 					
@@ -333,6 +369,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			if (GetGameBoardRect(hWnd, &rc))
 			{	
+
+				
+				RECT rcClient;
+				//display player text and turn
+				if (GetClientRect(hWnd, &rcClient))
+				{
+					//draw player one and player two text
+					const WCHAR szPlayer1 [] = L"Player 1";
+					const WCHAR szPlayer2 [] = L"Player 2";
+					SetBkMode(hdc, TRANSPARENT);
+					SetTextColor(hdc, RGB(255, 0, 0));
+					TextOut(hdc, 16, 16, szPlayer1, ARRAYSIZE(szPlayer1));
+					SetTextColor(hdc, RGB(0, 0, 255));
+					TextOut(hdc, rcClient.right-72, 16, szPlayer2, ARRAYSIZE(szPlayer2));
+					//display turn
+	//last point in tutorial was lecture 12 8:39
+					ShowTurn(hWnd, hdc);
+				}
+
+				//draw the game board
 				FillRect(hdc, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH));
 
 				for (int i = 0; i < 4; i++)
