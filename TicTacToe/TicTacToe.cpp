@@ -245,12 +245,32 @@ void ShowTurn(HWND hwnd, HDC hdc)
 	static const WCHAR szTurn1[] = L"Turn: Player 1";
 	static const WCHAR szTurn2[] = L"Turn: Player 2";
 	
-	const WCHAR * pszTurnText = (playerTurn == 1) ? szTurn1 : szTurn2;
+	const WCHAR * pszTurnText = NULL;
 
-	if (GetClientRect(hwnd, &rc))
+	switch (winner)
+	{
+	case 0: //continue to play
+		pszTurnText = (playerTurn == 1) ? szTurn1 : szTurn2;
+		break;
+	case 1: //player 1 wins
+		pszTurnText = L"Player 1 is teh winner!";
+		break;
+	case 2: //player 2 wins
+		pszTurnText = L"Player 2 is teh winner!";
+		break;
+	case 3: //its a draw
+		pszTurnText = L"It's a draw!";
+		break;
+	}
+//at the very end of lecture 12		
+
+	if (NULL != pszTurnText && GetClientRect(hwnd, &rc))
 	{
 		rc.top = rc.bottom - 48;
-		DrawText(hdc, pszTurnText, lstrlen(pszTurnText), &rc, DT_VCENTER);
+		FillRect(hdc, &rc, (HBRUSH)GetStockObject(GRAY_BRUSH));
+		SetTextColor(hdc, RGB(255, 255, 255));
+		SetBkMode(hdc, TRANSPARENT);
+		DrawText(hdc, pszTurnText, lstrlen(pszTurnText), &rc, DT_CENTER);
 	}
 
 }
